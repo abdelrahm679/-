@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#04060d" />
+<title>ORION · Unified Solar System Platform</title>
+<link rel="stylesheet" href="./css/style.css" />
+<script type="importmap">
+{
+  "imports": {
+    "three": "./node_modules/three/build/three.module.js",
+    "three/addons/": "./node_modules/three/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="app" data-mode="orrery" data-scale="visual">
+
+  <!-- ============ 3D VIEWPORT ============ -->
+  <div id="viewport">
+    <div id="labels" class="labels-layer"></div>
+    <div id="reticle" class="reticle" aria-hidden="true"></div>
+
+    <!-- Boot / error curtain -->
+    <div id="curtain" class="curtain">
+      <div class="curtain-inner">
+        <div class="orbit-spinner"><i></i><b></b></div>
+        <h1>ORION</h1>
+        <p id="curtain-msg">Booting Keplerian ephemeris engine…</p>
+        <pre id="curtain-error" hidden></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ FPP VISOR OVERLAY (cockpit) ============ -->
+  <div id="visor" class="visor" hidden>
+    <canvas id="visor-fx"></canvas>
+    <div class="visor-scan"></div>
+    <div class="visor-vignette"></div>
+    <div class="visor-hud">
+      <div class="hud-corner tl">
+        <span class="hud-k">SUIT</span><span class="hud-v" id="fpp-suit">—</span>
+        <span class="hud-k">O₂</span><span class="hud-v" id="fpp-o2">—</span>
+        <span class="hud-k">PRESS</span><span class="hud-v" id="fpp-press">—</span>
+      </div>
+      <div class="hud-corner tr">
+        <span class="hud-k">BODY</span><span class="hud-v" id="fpp-body">—</span>
+        <span class="hud-k">GRAV</span><span class="hud-v" id="fpp-grav">—</span>
+        <span class="hud-k">CAS</span><span class="hud-v" id="fpp-cas">—</span>
+      </div>
+      <div class="hud-corner bl">
+        <span class="hud-k">HR</span><span class="hud-v" id="fpp-hr">—</span>
+        <span class="hud-k">LOCAL</span><span class="hud-v" id="fpp-local">—</span>
+      </div>
+      <div class="hud-corner br">
+        <span class="hud-k">ΔV</span><span class="hud-v" id="fpp-dv">—</span>
+        <span class="hud-k">ATT</span><span class="hud-v" id="fpp-att">—</span>
+      </div>
+      <div class="hud-center">
+        <svg viewBox="0 0 120 120" class="attitude">
+          <circle cx="60" cy="60" r="46" /><circle cx="60" cy="60" r="3" />
+          <line x1="60" y1="8" x2="60" y2="24" /><line x1="60" y1="96" x2="60" y2="112" />
+          <line x1="8" y1="60" x2="24" y2="60" /><line x1="96" y1="60" x2="112" y2="60" />
+        </svg>
+      </div>
+      <div class="hud-mode">◤ PRESSURIZED FLIGHT DECK · LOOK: DRAG · MOVE: WASD · EXIT: ESC ◢</div>
+    </div>
+  </div>
+
+  <!-- ============ SURFACE EVA HUD ============ -->
+  <div id="eva" class="eva" hidden>
+    <div class="eva-hud">
+      <div class="eva-top">
+        <span class="hud-k">EVA</span><span class="hud-v" id="eva-body">—</span>
+        <span class="hud-k">SOL</span><span class="hud-v" id="eva-sol">—</span>
+        <span class="hud-k">TEMP</span><span class="hud-v" id="eva-temp">—</span>
+        <span class="hud-k">GRAV</span><span class="hud-v" id="eva-grav">—</span>
+        <span class="hud-k">POS</span><span class="hud-v" id="eva-pos">—</span>
+      </div>
+      <div class="eva-tips">
+      <b>W/A/S/D</b> traverse · <b>SHIFT</b> sprint · <b>SPACE</b> jump · <b>Q/E</b> roll ·
+      <b>1-7</b> select module · <b>click</b> deploy · <b>ESC</b> abort
+      </div>
+      <div class="eva-log" id="eva-log"></div>
+      <div id="colony-hud-root" class="colony-root"></div>
+      </div>
+      </div>
+
+  <!-- ============ TOP BAR ============ -->
+  <header class="topbar glass">
+    <button class="icon-btn only-mobile" id="btn-drawer-left" aria-label="Layers and time">☰</button>
+    <div class="brand">
+      <span class="brand-orb"></span>
+      <span class="brand-text"><b>ORION</b><small>UNIFIED SOLAR SYSTEM PLATFORM</small></span>
+    </div>
+
+    <div class="seg scale-switch" id="scale-switch" role="group" aria-label="Scale mode">
+      <button data-scale="true">True&nbsp;Scale</button>
+      <button data-scale="visual" class="active">Visual</button>
+    </div>
+
+    <nav class="top-actions">
+      <button class="chip" id="btn-neows" title="Near-Earth object radar (NASA NeoWs)">◉<span>NEO&nbsp;Radar</span></button>
+      <button class="chip" id="btn-cataclysm" title="Generative what-if cataclysm engine">✷<span>What-If</span></button>
+      <button class="chip" id="btn-notebook" title="Explorer's field notebook">▤<span>Notebook</span></button>
+      <button class="chip" id="btn-settings" title="Settings">⚙<span class="only-desktop">Setup</span></button>
+      <button class="icon-btn only-mobile" id="btn-drawer-right" aria-label="Telemetry">◧</button>
+    </nav>
+  </header>
+
+  <!-- ============ LEFT PANEL : TIME + LAYERS + PRESETS ============ -->
+  <aside class="panel panel-left glass" id="panel-left">
+    <button class="panel-collapse" data-collapse="panel-left" aria-label="Collapse">‹</button>
+
+    <section class="blk">
+      <h3>Time Warp</h3>
+      <div class="tw-readout">
+        <span class="tw-rate" id="tw-rate">1.0×</span>
+        <span class="tw-desc" id="tw-desc">real time</span>
+      </div>
+      <input type="range" id="tw-slider" min="0" max="6" step="1" value="0" aria-label="Time warp" />
+      <div class="tw-marks">
+        <span>1×</span><span>1e3</span><span>1e6×</span>
+      </div>
+      <div class="row wrap">
+        <button class="mini" data-tw="0">1×</button>
+        <button class="mini" data-tw="2">100×</button>
+        <button class="mini" data-tw="4">10k×</button>
+        <button class="mini" data-tw="6">1M×</button>
+        <button class="mini" id="tw-now" title="Jump to now">NOW</button>
+      </div>
+      <div class="kv"><span>Earth&nbsp;UTC</span><b id="utc-clock">—</b></div>
+      <div class="kv"><span>Julian&nbsp;Date</span><b id="jd-clock">—</b></div>
+    </section>
+
+    <section class="blk">
+      <h3>Visual Layers</h3>
+      <div class="toggles" id="layer-toggles"></div>
+    </section>
+
+    <section class="blk">
+      <h3>Camera Presets</h3>
+      <div class="presets" id="presets"></div>
+    </section>
+
+    <section class="blk">
+      <h3>Focus</h3>
+      <div class="row wrap" id="quick-focus"></div>
+    </section>
+  </aside>
+
+  <!-- ============ RIGHT PANEL : TELEMETRY DRAWER ============ -->
+  <aside class="panel panel-right glass" id="telemetry" hidden>
+    <button class="panel-collapse" data-close="telemetry" aria-label="Close">×</button>
+    <div class="tel-head">
+      <div class="tel-orb" id="tel-orb"></div>
+      <div>
+        <h2 id="tel-name">—</h2>
+        <p id="tel-class">—</p>
+      </div>
+    </div>
+
+    <div class="tel-grid" id="tel-grid"></div>
+
+    <div class="tel-block">
+      <h4>Orbital elements <small>J2000 + rate/century</small></h4>
+      <div class="tel-grid small" id="tel-elements"></div>
+    </div>
+
+    <div class="tel-block">
+      <h4>Environment</h4>
+      <div class="tel-grid small" id="tel-env"></div>
+    </div>
+
+    <div class="tel-note" id="tel-note"></div>
+
+    <div class="tel-actions">
+      <button class="btn primary" id="act-fpp">⛨ Enter FPP Cockpit</button>
+      <button class="btn" id="act-surface">⛰ Descend to Surface Sandbox</button>
+      <button class="btn ghost" id="act-track">◎ Lock Camera / Track</button>
+      <button class="btn ghost" id="act-cataclysm">✷ What-If Impact</button>
+    </div>
+  </aside>
+
+  <!-- ============ BOTTOM BAR (mobile-first) ============ -->
+  <footer class="bottombar glass" id="bottombar">
+    <div class="bb-group">
+      <button class="bb-btn" id="bb-prev" aria-label="Previous body">⟨</button>
+      <span class="bb-label" id="bb-body">Free Camera</span>
+      <button class="bb-btn" id="bb-next" aria-label="Next body">⟩</button>
+    </div>
+    <div class="bb-group grow">
+      <span class="bb-warp" id="bb-warp">1×</span>
+      <input type="range" id="bb-slider" min="0" max="6" step="1" value="0" aria-label="Time warp" />
+    </div>
+    <div class="bb-group wrap hide-xs" id="bb-presets"></div>
+    <button class="bb-btn exit" id="bb-exit" hidden>RETURN TO ORRERY</button>
+  </footer>
+
+  <!-- ============ FLOATING WINDOWS ============ -->
+  <section class="window glass" id="win-neows" hidden>
+    <header><h3>◉ NEO Radar · NASA NeoWs</h3><button class="x" data-close="win-neows">×</button></header>
+    <div class="win-body">
+      <div class="radar-wrap"><canvas id="radar-canvas" width="520" height="520"></canvas></div>
+      <div class="radar-meta">
+        <div class="kv"><span>Feed</span><b id="neo-range">—</b></div>
+        <div class="kv"><span>Objects</span><b id="neo-count">—</b></div>
+        <div class="kv"><span>Hazardous</span><b id="neo-haz" class="warn">—</b></div>
+        <div class="kv"><span>Closest</span><b id="neo-closest">—</b></div>
+        <div class="kv"><span>Status</span><b id="neo-status">idle</b></div>
+      </div>
+      <ul class="neo-list" id="neo-list"></ul>
+      <div class="win-actions">
+        <button class="btn" id="neo-refresh">⟳ Refresh feed</button>
+        <button class="btn ghost" id="neo-overlay">◎ Overlay on 3D orbit</button>
+      </div>
+      <p class="hint">Distances are real close-approach data. Radar radius is logarithmic (0.05 → 0.5 AU).</p>
+    </div>
+  </section>
+
+  <section class="window glass" id="win-cataclysm" hidden>
+    <header><h3>✷ Generative What-If Cataclysm Engine</h3><button class="x" data-close="win-cataclysm">×</button></header>
+    <div class="win-body">
+      <div class="field"><label>Target body</label><select id="cat-target"></select></div>
+      <div class="field"><label>Impactor diameter <b id="cat-d-l">1.0 km</b></label><input type="range" id="cat-d" min="0.01" max="10" step="0.01" value="1" /></div>
+      <div class="field"><label>Density <b id="cat-rho-l">3000 kg/m³</b></label><input type="range" id="cat-rho" min="500" max="8000" step="50" value="3000" /></div>
+      <div class="field"><label>Impact velocity <b id="cat-v-l">20 km/s</b></label><input type="range" id="cat-v" min="5" max="72" step="0.5" value="20" /></div>
+      <div class="field"><label>Entry angle <b id="cat-a-l">45°</b></label><input type="range" id="cat-a" min="5" max="90" step="1" value="45" /></div>
+      <div class="win-actions">
+        <button class="btn primary" id="cat-run">⟶ Ignite simulation</button>
+        <button class="btn" id="cat-ai">✦ AI propose scenario</button>
+        <button class="btn ghost" id="cat-reset">Reset planet</button>
+      </div>
+      <div class="cat-cards" id="cat-cards"></div>
+      <div class="cat-narrative" id="cat-narrative"></div>
+      <div class="cat-shader" id="cat-shader"></div>
+    </div>
+  </section>
+
+  <section class="window glass" id="win-notebook" hidden>
+    <header><h3>▤ Explorer's Field Notebook</h3><button class="x" data-close="win-notebook">×</button></header>
+    <div class="win-body">
+      <div class="nb-entry">
+        <textarea id="nb-text" placeholder="Observation… e.g. 'Europa's ice shell shows linear fracturing; tidal flexing from Jupiter likely drives cryovolcanism.'"></textarea>
+        <div class="win-actions">
+          <button class="btn primary" id="nb-eval">✦ Log &amp; evaluate</button>
+          <button class="btn ghost" id="nb-clear">Purge log</button>
+        </div>
+        <p class="hint">Evaluation runs on your local LLM (Ollama). No LLM reachable → deterministic rubric fallback.</p>
+      </div>
+      <ul class="nb-list" id="nb-list"></ul>
+    </div>
+  </section>
+
+  <section class="window glass" id="win-settings" hidden>
+    <header><h3>⚙ Platform Setup</h3><button class="x" data-close="win-settings">×</button></header>
+    <div class="win-body">
+      <div class="field"><label>NASA API key <small>(DEMO_KEY is rate-limited)</small></label>
+        <input type="text" id="set-nasa" placeholder="DEMO_KEY" /></div>
+      <div class="field"><label>Local LLM endpoint</label>
+        <input type="text" id="set-llm" placeholder="http://127.0.0.1:11434" /></div>
+      <div class="field"><label>Local LLM model</label>
+      <input type="text" id="set-model" placeholder="qwen2.5:7b" /></div>
+      <div class="field check">
+      <label class="switch"><input type="checkbox" id="set-nasa-proxy" />
+      <span>Serve NeoWs via Vercel Function (<code>/api/neows</code>) — keeps NASA key server-side</span></label>
+      </div>
+      <div class="win-actions">
+        <button class="btn primary" id="set-save">Save</button>
+        <button class="btn" id="set-test">Test LLM link</button>
+      </div>
+      <div class="kv"><span>LLM status</span><b id="set-status">unknown</b></div>
+      <div class="kv"><span>Render backend</span><b id="set-render">—</b></div>
+      <div class="kv"><span>GPU memory (geometries/textures)</span><b id="set-mem">—</b></div>
+      <p class="hint">Config persists in localStorage. Nothing leaves your machine except the NASA NeoWs query.</p>
+    </div>
+  </section>
+
+  <div id="toast" class="toast" hidden></div>
+</div>
+
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>

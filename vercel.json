@@ -1,0 +1,26 @@
+{
+ "version": 2,
+ "buildCommand": "npm run build",
+ "outputDirectory": "dist",
+ "cleanUrls": true,
+ "trailingSlash": false,
+ "functions": {
+ "api/neows.mjs": {
+ "maxDuration": 15
+ }
+ },
+ "rewrites": [
+ { "source": "/api/neows", "destination": "/api/neows" },
+ { "source": "/:path((?!js/|css/|node_modules/).*)", "destination": "/index.html" }
+ ],
+ "headers": [
+ {
+ "source": "/node_modules/(.*)",
+ "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+ },
+ {
+ "source": "/js/(.*)",
+ "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+ }
+ ]
+}
